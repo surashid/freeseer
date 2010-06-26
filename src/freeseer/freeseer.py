@@ -25,13 +25,13 @@
 import os
 import sys
 import time
-import framework.presentation
+from sqlite3 import *
 
 from PyQt4 import QtGui, QtCore
 
-from sqlite3 import *
 from framework.core import *
 from framework.qt_area_selector import *
+import framework.presentation
 from freeseer_ui_qt import *
 from freeseer_about import *
 
@@ -78,7 +78,7 @@ class MainApp(QtGui.QMainWindow):
         self.ui.hardwareBox.hide()
         self.statusBar().showMessage('ready')
         self.aboutDialog = AboutDialog()
-        
+
         self.talks_to_save = []
         self.talks_to_delete = []
 
@@ -108,11 +108,15 @@ class MainApp(QtGui.QMainWindow):
         self.connect(self.ui.eventList, QtCore.SIGNAL('currentIndexChanged(const QString&)'), self.filter_by_event)
         self.connect(self.ui.roomList, QtCore.SIGNAL('currentIndexChanged(const QString&)'),self.filter_by_room)
         self.connect(self.ui.recordButton, QtCore.SIGNAL('toggled(bool)'), self.capture)
+        self.connect(self.ui.testButton, QtCore.SIGNAL('toggled(bool)'), self.test_sources)
         self.connect(self.ui.audioFeedbackCheckbox, QtCore.SIGNAL('stateChanged(int)'), self.toggle_audio_feedback)
 
         # configure tab connections
+        self.connect(self.ui.videoConfigBox, QtCore.SIGNAL('toggled(bool)'), self.toggle_video_recording)
+        self.connect(self.ui.soundConfigBox, QtCore.SIGNAL('toggled(bool)'), self.toggle_audio_recording)
         self.connect(self.ui.videoDeviceList, QtCore.SIGNAL('activated(int)'), self.change_video_device)
         self.connect(self.ui.audioSourceList, QtCore.SIGNAL('currentIndexChanged(int)'), self.change_audio_device)
+        
         # connections for video source radio buttons
         self.connect(self.ui.localDesktopButton, QtCore.SIGNAL('clicked()'), self.toggle_video_source)
         self.connect(self.ui.recordLocalDesktopButton, QtCore.SIGNAL('clicked()'), self.toggle_video_source)
@@ -166,6 +170,20 @@ class MainApp(QtGui.QMainWindow):
             self.ui.hardwareButton.setChecked(True)
             self.ui.firewiresrcButton.setChecked(True)
 
+    def toggle_video_recording(self, state):
+        '''
+        Enables / Disables video recording depending on if the user has
+        checked the video box in configuration mode.
+        '''
+        self.core.set_video_mode(state)
+
+    def toggle_audio_recording(self, state):
+        '''
+        Enables / Disables audio recording depending on if the user has
+        checked the audio box in configuration mode.
+        '''
+        self.core.set_audio_mode(state)
+
     def toggle_video_source(self):
         '''
         Updates the GUI when the user selects a different video source and
@@ -201,13 +219,19 @@ class MainApp(QtGui.QMainWindow):
     def load_settings(self):
         self.ui.videoDirectoryLineEdit.setText(self.core.config.videodir)
         self.ui.talksFileLineEdit.setText(self.core.config.talksfile)
-        resolution = self.ui.resolutionComboBox.findText(self.core.config.resolution)
+
+        if self.core.config.resolution == '0x0':
+            resolution = 0
+        else:
+            resolution = self.ui.resolutionComboBox.findText(self.core.config.resolution)
         if not (resolution < 0): self.ui.resolutionComboBox.setCurrentIndex(resolution)
         
     def save_settings(self):
         self.core.config.videodir = str(self.ui.videoDirectoryLineEdit.text())
         self.core.config.talksdir = str(self.ui.talksFileLineEdit.text())
         self.core.config.resolution = str(self.ui.resolutionComboBox.currentText())
+        if self.core.config.resolution == 'NONE':
+            self.core.config.resolution = '0x0'
         self.core.config.writeConfig()
         
         self.change_output_resolution()
@@ -234,7 +258,11 @@ class MainApp(QtGui.QMainWindow):
         self.core.change_videosrc(src, dev)
         
     def change_output_resolution(self):
-        s = str(self.ui.resolutionComboBox.currentText()).split('x')
+        res = str(self.ui.resolutionComboBox.currentText())
+        if res == 'NONE':
+            s = '0x0'.split('x')
+        else:
+            s = res.split('x')
         width = s[0]
         height = s[1]
         self.core.change_output_resolution(width, height)
@@ -265,25 +293,29 @@ class MainApp(QtGui.QMainWindow):
             return
         self.core.audioFeedback(False)
 
-    def capture(self):
+    def capture(self, state):
         '''
         Function for recording and stopping recording.
         '''
-        if not (self.ui.recordButton.isChecked()):
-            self.core.stop()
-            self.ui.recordButton.setText('Record')
-            self.ui.videoConfigBox.setEnabled(True)
-            self.ui.soundConfigBox.setEnabled(True)
-            self.ui.audioFeedbackCheckbox.setEnabled(True)
-            self.ui.audioFeedbackSlider.setValue(0)
-            self.statusBar().showMessage('ready')
-        else:
+        if (state): # Start Recording.
             self.core.record(str(self.ui.talkList.currentText().toUtf8()))
             self.ui.recordButton.setText('Stop')
-            self.ui.videoConfigBox.setEnabled(False)
-            self.ui.soundConfigBox.setEnabled(False)
-            self.ui.audioFeedbackCheckbox.setEnabled(False)
             self.statusBar().showMessage('recording...')
+            
+        else: # Stop Recording.
+            self.core.stop()
+            self.ui.recordButton.setText('Record')
+            self.ui.audioFeedbackSlider.setValue(0)
+            self.statusBar().showMessage('ready')
+            
+
+    def test_sources(self, state):
+        # Test video and audio sources
+        if (self.ui.audioFeedbackCheckbox.isChecked()):
+            self.core.test_sources(state, True, True)
+        # Test only video source
+        else:
+            self.core.test_sources(state, True, False)
 
     def add_talk(self):
         talk = ""        
@@ -409,7 +441,7 @@ class MainApp(QtGui.QMainWindow):
 
     def closeEvent(self, event):
         self.core.logger.log.info('Exiting freeseer...')
-        self.core.stop()
+        #self.core.stop()
         event.accept()
 
     def filter_by_room(self,roomName):
