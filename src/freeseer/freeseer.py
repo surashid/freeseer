@@ -25,9 +25,11 @@
 import os
 import sys
 import time
+import framework.presentation
 
 from PyQt4 import QtGui, QtCore
 
+from sqlite3 import *
 from framework.core import *
 from framework.qt_area_selector import *
 from freeseer_ui_qt import *
@@ -76,6 +78,9 @@ class MainApp(QtGui.QMainWindow):
         self.ui.hardwareBox.hide()
         self.statusBar().showMessage('ready')
         self.aboutDialog = AboutDialog()
+        
+        self.talks_to_save = []
+        self.talks_to_delete = []
 
         self.core = FreeseerCore(self)
 
@@ -88,6 +93,8 @@ class MainApp(QtGui.QMainWindow):
             self.ui.audioSourceList.addItem(src)
 
         self.load_talks()
+        self.load_events()
+        self.load_rooms()
         self.load_settings()
 
         # setup systray
@@ -98,16 +105,14 @@ class MainApp(QtGui.QMainWindow):
         self.connect(self.systray, QtCore.SIGNAL('activated(QSystemTrayIcon::ActivationReason)'), self._icon_activated)
 
         # main tab connections
+        self.connect(self.ui.eventList, QtCore.SIGNAL('currentIndexChanged(const QString&)'), self.filter_by_event)
+        self.connect(self.ui.roomList, QtCore.SIGNAL('currentIndexChanged(const QString&)'),self.filter_by_room)
         self.connect(self.ui.recordButton, QtCore.SIGNAL('toggled(bool)'), self.capture)
-        self.connect(self.ui.testButton, QtCore.SIGNAL('toggled(bool)'), self.test_sources)
         self.connect(self.ui.audioFeedbackCheckbox, QtCore.SIGNAL('stateChanged(int)'), self.toggle_audio_feedback)
 
         # configure tab connections
-        self.connect(self.ui.videoConfigBox, QtCore.SIGNAL('toggled(bool)'), self.toggle_video_recording)
-        self.connect(self.ui.soundConfigBox, QtCore.SIGNAL('toggled(bool)'), self.toggle_audio_recording)
         self.connect(self.ui.videoDeviceList, QtCore.SIGNAL('activated(int)'), self.change_video_device)
         self.connect(self.ui.audioSourceList, QtCore.SIGNAL('currentIndexChanged(int)'), self.change_audio_device)
-        
         # connections for video source radio buttons
         self.connect(self.ui.localDesktopButton, QtCore.SIGNAL('clicked()'), self.toggle_video_source)
         self.connect(self.ui.recordLocalDesktopButton, QtCore.SIGNAL('clicked()'), self.toggle_video_source)
@@ -126,7 +131,7 @@ class MainApp(QtGui.QMainWindow):
         # edit talks tab connections
         self.connect(self.ui.addTalkButton, QtCore.SIGNAL('clicked()'), self.add_talk)
         self.connect(self.ui.removeTalkButton, QtCore.SIGNAL('clicked()'), self.remove_talk)
-        self.connect(self.ui.saveButton, QtCore.SIGNAL('clicked()'), self.save_talks)
+        #self.connect(self.ui.saveButton, QtCore.SIGNAL('clicked()'), self.save_talks)
         self.connect(self.ui.resetButton, QtCore.SIGNAL('clicked()'), self.load_talks)
 
         # Main Window Connections
@@ -160,20 +165,6 @@ class MainApp(QtGui.QMainWindow):
         elif (self.videosrc == 'firewire'):
             self.ui.hardwareButton.setChecked(True)
             self.ui.firewiresrcButton.setChecked(True)
-
-    def toggle_video_recording(self, state):
-        '''
-        Enables / Disables video recording depending on if the user has
-        checked the video box in configuration mode.
-        '''
-        self.core.set_video_mode(state)
-
-    def toggle_audio_recording(self, state):
-        '''
-        Enables / Disables audio recording depending on if the user has
-        checked the audio box in configuration mode.
-        '''
-        self.core.set_audio_mode(state)
 
     def toggle_video_source(self):
         '''
@@ -210,19 +201,13 @@ class MainApp(QtGui.QMainWindow):
     def load_settings(self):
         self.ui.videoDirectoryLineEdit.setText(self.core.config.videodir)
         self.ui.talksFileLineEdit.setText(self.core.config.talksfile)
-
-        if self.core.config.resolution == '0x0':
-            resolution = 0
-        else:
-            resolution = self.ui.resolutionComboBox.findText(self.core.config.resolution)
+        resolution = self.ui.resolutionComboBox.findText(self.core.config.resolution)
         if not (resolution < 0): self.ui.resolutionComboBox.setCurrentIndex(resolution)
         
     def save_settings(self):
         self.core.config.videodir = str(self.ui.videoDirectoryLineEdit.text())
         self.core.config.talksdir = str(self.ui.talksFileLineEdit.text())
         self.core.config.resolution = str(self.ui.resolutionComboBox.currentText())
-        if self.core.config.resolution == 'NONE':
-            self.core.config.resolution = '0x0'
         self.core.config.writeConfig()
         
         self.change_output_resolution()
@@ -249,11 +234,7 @@ class MainApp(QtGui.QMainWindow):
         self.core.change_videosrc(src, dev)
         
     def change_output_resolution(self):
-        res = str(self.ui.resolutionComboBox.currentText())
-        if res == 'NONE':
-            s = '0x0'.split('x')
-        else:
-            s = res.split('x')
+        s = str(self.ui.resolutionComboBox.currentText()).split('x')
         width = s[0]
         height = s[1]
         self.core.change_output_resolution(width, height)
@@ -284,48 +265,81 @@ class MainApp(QtGui.QMainWindow):
             return
         self.core.audioFeedback(False)
 
-    def capture(self, state):
+    def capture(self):
         '''
         Function for recording and stopping recording.
         '''
-        if (state): # Start Recording.
-            self.core.record(str(self.ui.talkList.currentText().toUtf8()))
-            self.ui.recordButton.setText('Stop')
-            self.statusBar().showMessage('recording...')
-            
-        else: # Stop Recording.
+        if not (self.ui.recordButton.isChecked()):
             self.core.stop()
             self.ui.recordButton.setText('Record')
+            self.ui.videoConfigBox.setEnabled(True)
+            self.ui.soundConfigBox.setEnabled(True)
+            self.ui.audioFeedbackCheckbox.setEnabled(True)
             self.ui.audioFeedbackSlider.setValue(0)
             self.statusBar().showMessage('ready')
-            
-
-    def test_sources(self, state):
-        # Test video and audio sources
-        if (self.ui.audioFeedbackCheckbox.isChecked()):
-            self.core.test_sources(state, True, True)
-        # Test only video source
         else:
-            self.core.test_sources(state, True, False)
+            self.core.record(str(self.ui.talkList.currentText().toUtf8()))
+            self.ui.recordButton.setText('Stop')
+            self.ui.videoConfigBox.setEnabled(False)
+            self.ui.soundConfigBox.setEnabled(False)
+            self.ui.audioFeedbackCheckbox.setEnabled(False)
+            self.statusBar().showMessage('recording...')
 
     def add_talk(self):
-        talk = u""
-        if (self.ui.roomEdit.isEnabled()): talk += self.ui.roomEdit.text() + u" - "
-        if (self.ui.presenterEdit.isEnabled()): talk += self.ui.presenterEdit.text() + u" - "
-        talk += self.ui.titleEdit.text()
-
+        talk = ""        
+        event = ""
+        room = ""
+        dateTime = ""
+        presenter = ""
+        
+        
+        
+        if (self.ui.presenterEdit.isEnabled()): 
+            talk += self.ui.presenterEdit.text()+u" - "
+            presenter = self.ui.presenterEdit.text()
+        
+        talk += self.ui.titleEdit.text()        
+        title = self.ui.titleEdit.text()
+        
+        if (self.ui.eventEdit.isEnabled()): event = self.ui.eventEdit.text()
+            
+        if (self.ui.roomEdit.isEnabled()): 
+            talk += u" - "+self.ui.roomEdit.text() 
+            room = self.ui.roomEdit.text()
+            
+        if (self.ui.dateTimeEdit.isEnabled()): dateTime = self.ui.dateTimeEdit.text()            
+        
         # Do not add talks if they are empty strings
         if (len(talk) == 0): return
-        
+      
+      
+        self.talks_to_save.append(framework.presentation.Presentation(str(title),str(presenter),"","",str(event),str(dateTime),str(room)))
         self.ui.editTalkList.addItem(talk)
-
-        #clean up add title boxes
+        
+        #clean up and add title boxes
+        
+        self.ui.eventEdit.clear()
+        self.ui.dateTimeEdit.clear()
         self.ui.roomEdit.clear()
         self.ui.presenterEdit.clear()
         self.ui.titleEdit.clear()
+        
+        #disable non-mandatory fields
+        self.ui.eventEdit.setDisabled(True)       
+        self.ui.dateTimeEdit.setDisabled(True)       
+        self.ui.roomEdit.setDisabled(True)       
+        self.ui.presenterEdit.setDisabled(True) 
+        
+        self.save_talks()      
 
     def remove_talk(self):
+        item = str(self.ui.editTalkList.item(self.ui.editTalkList.currentRow()).text())        
+        data = item.split(" - ")       
+        self.talks_to_delete.append(data)       
         self.ui.editTalkList.takeItem(self.ui.editTalkList.currentRow())
+        
+        self.save_talks()
+
 
     def load_talks(self):
         '''
@@ -337,17 +351,51 @@ class MainApp(QtGui.QMainWindow):
         for talk in talklist:
             self.ui.talkList.addItem(talk)
             self.ui.editTalkList.addItem(talk)
+            
+    def load_events(self):
+        '''
+        This method updates the GUI with the available presentation events.
+        '''
+        eventList = self.core.get_talk_events()
+        self.ui.eventList.clear()
+        self.ui.eventList.addItem("All")
+        for event in eventList:
+            if len(event)>0:    self.ui.eventList.addItem(event)
+            
+    def load_rooms(self):
+        '''
+        This method updates the GUI with the available presentation rooms.
+        '''
+        
+        roomList = self.core.get_talk_rooms()   
+        self.ui.roomList.clear()
+        self.ui.roomList.addItem("All")     
+        for room in roomList:
+            if len(room)>0:    self.ui.roomList.addItem(room)
+        
+
+            
 
     def save_talks(self):
-        talk_list = []
-        i = 0
-        while i < self.ui.editTalkList.count():
-            t = unicode(self.ui.editTalkList.item(i).text()) + '\n'
-            talk_list.append(t)
-            i = i+1
-
-        self.core.save_talk_titles(talk_list)
-        self.load_talks()
+        for item in self.talks_to_save:            
+            item.save_to_db()
+        
+        for item in self.talks_to_delete:
+            self.database_connection = connect(self.core.presentationsfile)
+            cursor = self.database_connection.cursor()
+            cursor.execute('''delete from presentations 
+                                    where Speaker=? and Title=? and Room=?''',
+                                        [item[0],item[1],item[2]])
+            self.database_connection.commit()
+            cursor.close()
+            
+        del self.talks_to_delete[:]
+        del self.talks_to_save[:]
+        
+        #reload filters
+        self.load_talks()        
+        self.load_events()
+        self.load_rooms()
 
     def _icon_activated(self, reason):
         if reason == QtGui.QSystemTrayIcon.Trigger:
@@ -361,8 +409,70 @@ class MainApp(QtGui.QMainWindow):
 
     def closeEvent(self, event):
         self.core.logger.log.info('Exiting freeseer...')
-        #self.core.stop()
+        self.core.stop()
         event.accept()
+
+    def filter_by_room(self,roomName):
+        talks_matched = []
+        
+        defaultconnection = connect(self.core.presentationsfile)
+        defaultcursor = defaultconnection.cursor()       
+        
+        self.ui.talkList.clear()
+        if roomName != "All":            
+            if(self.ui.eventList.currentText()!="All"):
+                defaultcursor.execute('''select distinct Speaker,Title,Room from presentations \
+                                        where Event=? and Room=? ''', [str(self.ui.eventList.currentText()),str(roomName)])
+            else:
+                defaultcursor.execute('''select distinct Speaker,Title,Room from presentations \
+                                        where Room=? ''', [str(roomName)])           
+            for row in defaultcursor:
+                text = "%s - %s - %s" % (row[0],row[1],row[2])
+                talks_matched.append(text)
+            for entry in talks_matched:
+                self.ui.talkList.addItem(entry)
+        else:
+            if(self.ui.eventList.currentText()=="All"):
+                self.load_talks()
+            else:
+                defaultcursor.execute('''select distinct Speaker,Title,Room from presentations \
+                                        where Event=? ''', [str(self.ui.eventList.currentText())])
+                for row in defaultcursor:
+                    text = "%s - %s - %s" % (row[0],row[1],row[2])
+                    talks_matched.append(text)
+                for entry in talks_matched:
+                    self.ui.talkList.addItem(entry)
+            
+    def filter_by_event(self,eventName):
+        talks_matched = []
+        
+        defaultconnection = connect(self.core.presentationsfile)
+        defaultcursor = defaultconnection.cursor()         
+            
+        self.ui.talkList.clear()
+        if eventName != "All":       
+            if(self.ui.roomList.currentText()!="All"):
+                defaultcursor.execute('''select distinct Speaker,Title,Room from presentations \
+                                        where Event=? and Room=? ''', [str(eventName),str(self.ui.roomList.currentText())])
+            else:
+                defaultcursor.execute('''select distinct Speaker,Title,Room from presentations \
+                                        where Event=? ''', [str(eventName)])  
+            for row in defaultcursor:
+                text = "%s - %s - %s" % (row[0],row[1],row[2])
+                talks_matched.append(text)
+            for entry in talks_matched:
+                self.ui.talkList.addItem(entry)
+        else:
+            if(self.ui.roomList.currentText()=="All"):
+                self.load_talks()
+            else:
+                defaultcursor.execute('''select distinct Speaker,Title,Room from presentations \
+                                        where Room=? ''', [str(self.ui.roomList.currentText())])
+                for row in defaultcursor:
+                    text = "%s - %s - %s" % (row[0],row[1],row[2])
+                    talks_matched.append(text)
+                for entry in talks_matched:
+                    self.ui.talkList.addItem(entry)
 
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
