@@ -237,15 +237,15 @@
         <item>
          <widget class="QToolBox" name="toolBox">
           <property name="currentIndex">
-           <number>1</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="page">
            <property name="geometry">
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>500</width>
-             <height>260</height>
+             <width>545</width>
+             <height>303</height>
             </rect>
            </property>
            <attribute name="label">
@@ -490,6 +490,9 @@ v4l2src does not work.</string>
               <layout class="QGridLayout" name="gridLayout_5">
                <item row="0" column="0">
                 <layout class="QHBoxLayout" name="horizontalLayout_10">
+                 <property name="sizeConstraint">
+                  <enum>QLayout::SetFixedSize</enum>
+                 </property>
                  <item>
                   <widget class="QLabel" name="resolutionLabel">
                    <property name="text">
@@ -581,13 +584,25 @@ v4l2src does not work.</string>
                     </widget>
                    </item>
                    <item row="1" column="1">
-                    <widget class="QLineEdit" name="urlEdit"/>
+                    <widget class="QLineEdit" name="urlEdit">
+                     <property name="text">
+                      <string>127.0.0.1</string>
+                     </property>
+                    </widget>
                    </item>
                    <item row="2" column="1">
-                    <widget class="QLineEdit" name="mountEdit"/>
+                    <widget class="QLineEdit" name="mountEdit">
+                     <property name="text">
+                      <string>stream.ogv</string>
+                     </property>
+                    </widget>
                    </item>
                    <item row="3" column="1">
-                    <widget class="QLineEdit" name="portEdit"/>
+                    <widget class="QLineEdit" name="portEdit">
+                     <property name="text">
+                      <string>8000</string>
+                     </property>
+                    </widget>
                    </item>
                    <item row="4" column="0">
                     <widget class="QLabel" name="passwordLabel">
@@ -600,7 +615,11 @@ v4l2src does not work.</string>
                     </widget>
                    </item>
                    <item row="4" column="1">
-                    <widget class="QLineEdit" name="passwordEdit"/>
+                    <widget class="QLineEdit" name="passwordEdit">
+                     <property name="text">
+                      <string>hackme</string>
+                     </property>
+                    </widget>
                    </item>
                   </layout>
                  </widget>

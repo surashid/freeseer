@@ -368,6 +368,11 @@ class MainApp(QtGui.QMainWindow):
             self.core.config.resolution = '0x0'
         self.core.config.writeConfig()
         
+        if ( self.ui.StreamingConfigBox.isChecked()):
+        	self.core.backend.enable_icecast_streaming( str(self.ui.urlEdit.text()), int(self.ui.portEdit.text()), str(self.ui.passwordEdit.text()), str(self.ui.mountEdit.text()))
+        else:
+        	self.core.backend.disable_icecast_streaming()
+        
         self.change_output_resolution()
         
     def browse_video_directory(self):
