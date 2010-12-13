@@ -190,7 +190,7 @@ class Freeseer_gstreamer(BackendInterface):
                         self.video_tee)
         
         if ( self.icecast ):
-            # Add a "tee" component so that the icecast components can be built at the  end
+            # Add a "tee" component so that the icecast components can be built at the end
             self.src_tee = gst.element_factory_make('tee', 'src_tee')
             src_queue = gst.element_factory_make('queue','src_queue')
             self.player.add( self.src_tee, src_queue)
@@ -211,7 +211,7 @@ class Freeseer_gstreamer(BackendInterface):
                             self.dv1394dvdec)
             
             if ( self.icecast ):
-                # added
+                # The "src_queue" was added so link from it
                 src_queue.link(self.dv1394dvdemux)
             else:                
                 video_src.link(self.dv1394dvdemux)
@@ -220,7 +220,7 @@ class Freeseer_gstreamer(BackendInterface):
             gst.element_link_many(self.dv1394q1, self.dv1394dvdec, video_rate)
         else:
             if ( self.icecast ):
-                # added
+                # The "src_queue" was added so link from it
                 src_queue.link(video_rate)
             else:
                 video_src.link(video_rate)
@@ -243,7 +243,7 @@ class Freeseer_gstreamer(BackendInterface):
         video_cspace = self.player.get_by_name('video_cspace')
         
         if ( self.icecast ):
-            # Added:
+            # The "src_queue" was added so remove it
             src_queue = self.player.get_by_name('src_queue')
             self.player.remove(self.src_tee, src_queue)
 
@@ -396,7 +396,7 @@ class Freeseer_gstreamer(BackendInterface):
         icecast.set_property('password', self.icecast_password)
         icecast.set_property('mount', self.icecast_mount)
         
-        # Added: ffmpegcolorspace
+        # Add "ffmpegcolorspace" again for the stream
         icecast_colorspace = gst.element_factory_make('ffmpegcolorspace', 'icecast_colorspace')
         
         icecast_queue = gst.element_factory_make('queue', 'icecast_queue')
@@ -404,30 +404,27 @@ class Freeseer_gstreamer(BackendInterface):
         icecast_scale_cap = gst.element_factory_make('capsfilter', 'icecast_scale_cap')
         icecast_gst_caps = gst.Caps('video/x-raw-yuv,width=320,height=240')
         icecast_scale_cap.set_property('caps', icecast_gst_caps)
-        #icecast_scale_cap.set_property('caps',
-           # gst.caps_from_string('video/x-raw-rgb,width=320,height=240'))
         
         icecast_encoder = gst.element_factory_make('theoraenc', 'icecast_encoder')
-        # Added: setting the property for the icecast_encoder
         icecast_encoder.set_property('quality',16)
         
         icecast_mux = gst.element_factory_make('oggmux', 'icecast_mux')
 
-	icecast_alsasrc = gst.element_factory_make('alsasrc','icecast_alsasrc')
-	icecast_queue2 = gst.element_factory_make('queue','icecast_queue2')
-	icecast_audioconvert = gst.element_factory_make('audioconvert','icecast_audioconvert')
-	icecast_vorbisenc = gst.element_factory_make('vorbisenc','icecast_vorbisenc')
-	icecast_vorbisenc.set_property('quality',0.2)
-	icecast_queue3 = gst.element_factory_make('queue','icecast_queue3')
+        icecast_alsasrc = gst.element_factory_make('alsasrc','icecast_alsasrc')
+        icecast_queue2 = gst.element_factory_make('queue','icecast_queue2')
+        icecast_audioconvert = gst.element_factory_make('audioconvert','icecast_audioconvert')
+        icecast_vorbisenc = gst.element_factory_make('vorbisenc','icecast_vorbisenc')
+        icecast_vorbisenc.set_property('quality',0.2)
+        icecast_queue3 = gst.element_factory_make('queue','icecast_queue3')
         icecast_queue4 = gst.element_factory_make('queue','icecast_queue4')
-	icecast_queue5 = gst.element_factory_make('queue','icecast_queue5')
+        icecast_queue5 = gst.element_factory_make('queue','icecast_queue5')
 
         self.player.add(icecast,
                         icecast_queue,
-			icecast_queue2,
-			icecast_queue3,
-			icecast_queue4,
-			icecast_queue5,
+                        icecast_queue2,
+                        icecast_queue3,
+                        icecast_queue4,
+                        icecast_queue5,
                         icecast_colorspace,
                         icecast_encoder,
                         icecast_mux,
@@ -444,8 +441,8 @@ class Freeseer_gstreamer(BackendInterface):
                               icecast_scale_cap,
                               icecast_encoder,
                               icecast_mux)
-	
-	gst.element_link_many(icecast_alsasrc,
+        
+        gst.element_link_many(icecast_alsasrc,
                               icecast_queue2,
                               icecast_audioconvert,
                               icecast_vorbisenc,
@@ -455,36 +452,20 @@ class Freeseer_gstreamer(BackendInterface):
                               icecast_queue5,
                               icecast)
         
-#        self.player.add(icecast,
-#                        icecast_queue,
-#                        icecast_encoder,
-#                        icecast_mux,
-#                        icecast_scale,
-#                        icecast_scale_cap)
-#                        
-#        gst.element_link_many(self.video_tee,
-#                              icecast_queue,
-#                              icecast_scale,
-#                              icecast_scale_cap,
-#                              icecast_encoder,
-#                              icecast_mux,
-#                              icecast)
-        
     def _clear_icecast_streaming(self):
         '''
         Clears the icecast stream pipeline
         '''
         icecast = self.player.get_by_name('icecast')
         icecast_queue = self.player.get_by_name('icecast_queue')
-        # Added:
-	icecast_queue2 = self.player.get_by_name('icecast_queue2')
-	icecast_queue3 = self.player.get_by_name('icecast_queue3')
-	icecast_queue4 = self.player.get_by_name('icecast_queue4')
-	icecast_queue5 = self.player.get_by_name('icecast_queue5')
+        icecast_queue2 = self.player.get_by_name('icecast_queue2')
+        icecast_queue3 = self.player.get_by_name('icecast_queue3')
+        icecast_queue4 = self.player.get_by_name('icecast_queue4')
+        icecast_queue5 = self.player.get_by_name('icecast_queue5')
         icecast_colorspace = self.player.get_by_name('icecast_colorspace')
-	icecast_alsasrc = self.player.get_by_name('icecast_alsasrc')
-	icecast_audioconvert = self.player.get_by_name('icecast_audioconvert')
-	icecast_vorbisenc = self.player.get_by_name('icecast_vorbisenc')
+        icecast_alsasrc = self.player.get_by_name('icecast_alsasrc')
+        icecast_audioconvert = self.player.get_by_name('icecast_audioconvert')
+        icecast_vorbisenc = self.player.get_by_name('icecast_vorbisenc')
 
         #
         icecast_scale = self.player.get_by_name('icecast_scale')

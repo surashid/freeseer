@@ -369,9 +369,9 @@ class MainApp(QtGui.QMainWindow):
         self.core.config.writeConfig()
         
         if ( self.ui.StreamingConfigBox.isChecked()):
-        	self.core.backend.enable_icecast_streaming( str(self.ui.urlEdit.text()), int(self.ui.portEdit.text()), str(self.ui.passwordEdit.text()), str(self.ui.mountEdit.text()))
+            self.core.backend.enable_icecast_streaming( str(self.ui.urlEdit.text()), int(self.ui.portEdit.text()), str(self.ui.passwordEdit.text()), str(self.ui.mountEdit.text()))
         else:
-        	self.core.backend.disable_icecast_streaming()
+            self.core.backend.disable_icecast_streaming()
         
         self.change_output_resolution()
         
