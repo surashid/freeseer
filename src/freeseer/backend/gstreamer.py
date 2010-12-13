@@ -487,13 +487,6 @@ class Freeseer_gstreamer(BackendInterface):
                         icecast_vorbisenc,
                         icecast_scale,
                         icecast_scale_cap)
-        
-#        self.player.remove(icecast,
-#                           icecast_queue,
-#                           icecast_scale,
-#                           icecast_scale_cap,
-#                           icecast_encoder,
-#                           icecast_mux)
 
     ###
     ### Framework Required Functions
