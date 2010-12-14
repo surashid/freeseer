@@ -369,7 +369,15 @@ class MainApp(QtGui.QMainWindow):
         self.core.config.writeConfig()
         
         if ( self.ui.StreamingConfigBox.isChecked()):
-            self.core.backend.enable_icecast_streaming( str(self.ui.urlEdit.text()), int(self.ui.portEdit.text()), str(self.ui.passwordEdit.text()), str(self.ui.mountEdit.text()))
+            url = str(self.ui.urlEdit.text())
+            port = int(self.ui.portEdit.text())
+            password = str(self.ui.passwordEdit.text())
+            mount = str(self.ui.mountEdit.text())
+            
+            if ( url == "" or str(port) == "" or password == "" or mount == ""):
+                print 'ERROR: All the required fields for streaming has not been completed'
+            else:
+                self.core.backend.enable_icecast_streaming( str(self.ui.urlEdit.text()), int(self.ui.portEdit.text()), str(self.ui.passwordEdit.text()), str(self.ui.mountEdit.text()))
         else:
             self.core.backend.disable_icecast_streaming()
         
