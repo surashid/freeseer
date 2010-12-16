@@ -163,9 +163,7 @@ class Freeseer_gstreamer(BackendInterface):
         video_src = gst.element_factory_make(self.video_source, 'video_src')
         if (self.video_source_type.startswith('usb')):
             video_src.set_property('device', self.video_device)
-            
-
-            
+         
         video_rate = gst.element_factory_make('videorate', 'video_rate')
         video_rate_cap = gst.element_factory_make('capsfilter',
                                                     'video_rate_cap')
