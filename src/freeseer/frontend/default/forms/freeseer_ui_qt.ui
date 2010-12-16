@@ -535,7 +535,7 @@ v4l2src does not work.</string>
                   <bool>true</bool>
                  </property>
                  <property name="title">
-                  <string>Enable Streaming</string>
+                  <string> Enable Streaming For USB device</string>
                  </property>
                  <property name="checkable">
                   <bool>true</bool>
