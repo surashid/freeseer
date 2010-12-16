@@ -1,0 +1,150 @@
+This document contains instructions and information for using the 
+streaming (audio and video) functionality of freeseer.
+
+For this functionality, an additional software, Icecast2, needs to be
+installed and set up on the machine which will be used as the destination
+server for the video stream. In addition to this, freeseer must obviously 
+be installed properly and fully functional, with all its required packages
+installed.
+
+Note: Only the USB device recording has been tested properly with
+the streaming functionality and that is the not only supported by freeseer
+at the moment. 
+
+-------------------------------------------------------------------------
+
+Installation and set up instructions for Icecast2 server:
+
+-------------------------------------------------------------------------
+
+1) Download the source for icecast2:  http://www.icecast.org/download.php
+
+2) Extract the files -> Follow the README file instructions in the source folder.
+
+3) Things to note for icecast2's README file and installation steps:
+
+   Ensure the following packages (including their "-dev" versions) are installed. 
+   The exact package name might differ depending on your distribution.
+   
+	* libxml2 - http://xmlsoft.org/downloads.html
+	* libxslt - http://xmlsoft.org/XSLT/downloads.html
+	* curl - http://curl.haxx.se/download.html (>= version 7.10 required)
+	* ogg/vorbis - http://www.vorbis.com/files (>= version 1.0 required) <--  libogg, libvorbis, etc
+
+	Ensure "libtheora-dev" is also installed.
+
+4) Execute the following commands (as per the README):
+
+    i) $ sudo ./configure
+
+    Ensure all the essential checks passed (look out for relevant "no"). 
+    You would need to install the missing packages and repeat this step to pass all the 
+    relevant checks (the checks associated with the required packages listed above). 
+    It may not give "error" at the end of the output, so it is recommended to check 
+    the output manually to ensure that icecast2 is installed with required support.
+
+    ii) sudo make
+
+    iii) sudo make install
+
+5) Navigate to /usr/local/etc/  (be default, it should be installed there)
+
+6) Edit "icecast.xml" (the configuration file):
+	* Ensure that the time out values are long enough. 
+          Usually, the following should be enough (but you might need to adjust depending your server/client):
+	---------
+        <client-timeout>600</client-timeout>
+        <header-timeout>30</header-timeout>
+        <source-timeout>30</source-timeout>
+	---------
+   
+	* Ensure that the log directory listed (the path specified within the "<logdir>" tags) exists on your file system.
+          If it doesn't, you would have to make those directories and make the appropriate changes in "icecast.xml" file.
+
+   You would most likely want to change the privacy settings of the admin : <admin-user> and <admin-password>.
+   By default, it is usual "admin" and "hackme" for the username name password respectively.
+
+   The rest of the settings should be fine but you might have to tweak 
+   this file if you are facing certain connection problems.
+
+7) Fire up icecast2 by invoking the following:
+  
+    icecast -c icecast.xml
+
+    (i.e. invoke icecast with the above command line parameter option and the configuration file, where it might be).
+
+8) Ensure that you are server has been set up properly by visiting the server's home page-> http://127.0.0.1:8000
+
+   You should be able to enter and view all the relevant settings by clicking on "Administration", where you would
+   need to enter the admin username and password set up previously.
+
+   The machine which is to be used as a server needs to keep this running while the video streaming is done.
+   Ensure that the client machines have access to the IP address of this server (the IP address can be determined 
+   by using the command "ifconfig"). The "ping" command can be used to check whether the client can get replies from 
+   the server IP address.The port 8000 should be open as well.
+
+
+
+-------------------------------------------------------------------------
+
+Instructions for sending the stream (within the freeseer GUI):
+
+-------------------------------------------------------------------------
+
+After executing freeseer (./run-freeseer) the main GUI should appear.
+
+* Click on the "Configure" tab.
+* Click on "Advanced Settings".
+
+* Tick and set "Enable Streaming for USB device"
+  (By default, this is disabled)
+
+* Enter all the 4 required fields in the text input fields
+  
+  Note: 
+   - URL/IP address is URL/IP address of the server's admin page.
+     It is 127.0.0.1 ONLY when the recording computer is also hosting the video streaming server.
+   - Mount point is the name of the stream as it would be visible to other clients.
+
+* Click "Apply" to save the settings.
+
+  NOTE: Freeseer will ONLY try to stream to the specified icecast2 server when the recording
+  is done using a USB device (web cam).
+
+* You can start recording anytime after this. IF the source is indeed a USB webcam,
+  the stream would be sent to the specified icecast2 server. This feature is an added feature on top 
+  of showing the preview and recording the video on the local machine.
+
+
+-------------------------------------------------------------------------
+
+Instructions for fetching the stream (for the client machines):
+
+-------------------------------------------------------------------------
+
+The stream can be fetched using various applications. The following are some of
+the methods with which this feature has been tested with:
+
+1) Using "mplayer" (or some other media players supporting the codecs):
+  
+  * From the client machine, go to the admin page of the Icecast2 server (http://IP_ADDRESS:8000)
+  * The main page should show "Mount point" followed by the name of the stream. Click on the "M3U" to download the
+    ".m3u" file.
+  * After the file has been downloaded, simply open it using the application.
+    You might notice "Buffering.." status (at the bottom, for "mplayer"). Within a few seconds, you should be able
+    hear and see the stream.
+
+  Note: You may also use some of these players directly from the command line (for example: mplayer http://IP_ADDRESS_HERE:8000/stream_name.ogv).
+  But you have to be careful about all the options required by that player. For better performance, it is advised to just open the file directly (using the GUI)
+  as that usually figures out the options required for executing the ".m3u" file. You may also be able to use other protoc
+
+2) Using the browser:
+  
+  Simply visit : http://IP_ADDRESS_HERE:8000/stream_name.ogv
+
+  That should play the stream right on the browser itself. If the machine needs to install certain codecs to play the stream, 
+  the browser may require some extensions to be installed. For better performance, it is suggested to use the option (1) whenever possible.
+
+  
+
+
