@@ -375,7 +375,7 @@ class MainApp(QtGui.QMainWindow):
             mount = str(self.ui.mountEdit.text())
             
             if ( url == "" or port == "" or password == "" or mount == ""):
-                QtGui.QMessageBox.warning(self, self.uiTranslator.tr("Incomplete Streaming Settings"), self.uiTranslator.tr("Please ensure that all the input fields for streaming are complete or disable the streaming option") , QtGui.QMessageBox.Ok);
+                QtGui.QMessageBox.warning(self, "Incomplete Streaming Settings", "Please ensure that all the input fields for streaming are complete or disable the streaming option" , QtGui.QMessageBox.Ok);
             else:
                 self.core.backend.enable_icecast_streaming( url, int(port), password, mount )
         else:
