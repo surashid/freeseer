@@ -163,7 +163,9 @@ class Freeseer_gstreamer(BackendInterface):
         video_src = gst.element_factory_make(self.video_source, 'video_src')
         if (self.video_source_type.startswith('usb')):
             video_src.set_property('device', self.video_device)
-         
+            
+
+            
         video_rate = gst.element_factory_make('videorate', 'video_rate')
         video_rate_cap = gst.element_factory_make('capsfilter',
                                                     'video_rate_cap')
@@ -307,7 +309,7 @@ class Freeseer_gstreamer(BackendInterface):
         self.audio_tee = gst.element_factory_make('tee', 'audio_tee')
         self.player.add(audio_src, self.audio_tee)
         audio_src.link(self.audio_tee)
-
+	
 
     def _clear_audio_source(self):
         audio_src = self.player.get_by_name('audio_src')
@@ -327,14 +329,14 @@ class Freeseer_gstreamer(BackendInterface):
         audioenc_codec = gst.element_factory_make(self.recording_audio_codec,
                                                         'audioenc_codec')
 
-        # create a VorbisTag element and merge tags from tag list
-        audioenc_tags = gst.element_factory_make("vorbistag", "audioenc_tags")
+	# create a VorbisTag element and merge tags from tag list
+	audioenc_tags = gst.element_factory_make("vorbistag", "audioenc_tags")
 
-        # set tag merge mode to GST_TAG_MERGE_REPLACE
-        merge_mode = gst.TagMergeMode.__enum_values__[2]
+	# set tag merge mode to GST_TAG_MERGE_REPLACE
+	merge_mode = gst.TagMergeMode.__enum_values__[2]
 
-        audioenc_tags.merge_tags(self.tags, merge_mode)
-        audioenc_tags.set_tag_merge_mode(merge_mode)
+	audioenc_tags.merge_tags(self.tags, merge_mode)
+	audioenc_tags.set_tag_merge_mode(merge_mode)
 
         self.player.add(audioenc_queue,
                         audioenc_convert,
@@ -358,7 +360,7 @@ class Freeseer_gstreamer(BackendInterface):
         audioenc_convert = self.player.get_by_name('audioenc_convert')
         audioenc_level = self.player.get_by_name('audioenc_level')
         audioenc_codec = self.player.get_by_name('audioenc_codec')
-        audioenc_tags = self.player.get_by_name('audioenc_tags')
+	audioenc_tags = self.player.get_by_name('audioenc_tags')
 
         self.player.remove(audioenc_queue,
                            audioenc_convert,
@@ -404,7 +406,6 @@ class Freeseer_gstreamer(BackendInterface):
 
         icecast_muxer = gst.element_factory_make(self.icecast_muxer, 'icecast_muxer')
 
-        icecast_audio_src = gst.element_factory_make(self.icecast_audio_src,'icecast_audio_src')
         icecast_queue2 = gst.element_factory_make('queue','icecast_queue2')
         icecast_audioconvert = gst.element_factory_make('audioconvert','icecast_audioconvert')
         icecast_audio_codec = gst.element_factory_make(self.icecast_audio_codec,'icecast_audio_codec')
@@ -416,7 +417,6 @@ class Freeseer_gstreamer(BackendInterface):
                         icecast_colorspace,
                         icecast_video_codec,
                         icecast_muxer,
-                        icecast_audio_src,
                         icecast_audioconvert,
                         icecast_audio_codec,
                         icecast_scale,
@@ -430,7 +430,7 @@ class Freeseer_gstreamer(BackendInterface):
                               icecast_video_codec,
                               icecast_muxer)
 
-        gst.element_link_many(icecast_audio_src,
+        gst.element_link_many(self.audio_tee,
                               icecast_queue2,
                               icecast_audioconvert,
                               icecast_audio_codec,
@@ -445,7 +445,6 @@ class Freeseer_gstreamer(BackendInterface):
         icecast_queue = self.player.get_by_name('icecast_queue')
         icecast_queue2 = self.player.get_by_name('icecast_queue2')
         icecast_colorspace = self.player.get_by_name('icecast_colorspace')
-        icecast_audio_src = self.player.get_by_name('icecast_audio_src')
         icecast_audioconvert = self.player.get_by_name('icecast_audioconvert')
         icecast_audio_codec = self.player.get_by_name('icecast_audio_codec')
         icecast_scale = self.player.get_by_name('icecast_scale')
@@ -455,11 +454,10 @@ class Freeseer_gstreamer(BackendInterface):
 
         self.player.remove(icecast,
                         icecast_queue,
-			icecast_queue2,
+                        icecast_queue2,
                         icecast_colorspace,
                         icecast_video_codec,
                         icecast_muxer,
-                        icecast_audio_src,
                         icecast_audioconvert,
                         icecast_audio_codec,
                         icecast_scale,
@@ -720,8 +718,10 @@ class Freeseer_gstreamer(BackendInterface):
         self.icecast_port = port
         self.icecast_password = password
         self.icecast_mount = mount
-        print "Icecast settings enabled"
+        #print "Icecast settings enabled"
+        self.core.logger.log.info("Icecast settings enabled")
 
     def disable_icecast_streaming(self):
         self.icecast = False
-        print "Icecast settings disabled"
+        #print "Icecast settings disabled"
+        self.core.logger.log.info("Icecast settings disabled")
