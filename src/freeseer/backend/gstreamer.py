@@ -76,7 +76,6 @@ class Freeseer_gstreamer(BackendInterface):
         self.icecast_video_codec = 'theoraenc'
         self.icecast_muxer = 'oggmux'
         self.icecast_audio_codec = 'vorbisenc'
-        self.icecast_audio_src = 'alsasrc'
 
         # Initialize Player
         self.player = gst.Pipeline('player')
@@ -718,10 +717,8 @@ class Freeseer_gstreamer(BackendInterface):
         self.icecast_port = port
         self.icecast_password = password
         self.icecast_mount = mount
-        #print "Icecast settings enabled"
         self.core.logger.log.info("Icecast settings enabled")
 
     def disable_icecast_streaming(self):
         self.icecast = False
-        #print "Icecast settings disabled"
         self.core.logger.log.info("Icecast settings disabled")
